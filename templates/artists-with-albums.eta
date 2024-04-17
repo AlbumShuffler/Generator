@@ -1,0 +1,14 @@
+module ArtistsWithAlbums exposing ( albumStorage )
+
+import Albums exposing (ArtistWithAlbums)
+<% it.moduleNames.forEach(function(moduleName) {%>
+import AlbumStorage<%~ moduleName %> 
+<% }) %>
+
+albumStorage : List ArtistWithAlbums
+albumStorage =
+    [ { artist = AlbumStorage<%~ it.moduleNames[0] %>.artistInfo, albums = AlbumStorage<%~ it.moduleNames[0] %>.albumStorage }
+<% it.moduleNames.slice(1).forEach(function(moduleName) {%>
+    , { artist = AlbumStorage<%~ moduleName %>.artistInfo, albums = AlbumStorage<%~ moduleName %>.albumStorage }
+<% }) %>
+    ]

@@ -1,0 +1,51 @@
+module AlbumStorage<%~ it.moduleName %> exposing ( albumStorage, artistInfo )
+
+import Array exposing(Array)
+import Albums exposing (Album, ArtistInfo)
+
+
+artistInfo : ArtistInfo
+artistInfo =
+  { name = "<%~ it.artist.name %>" 
+  , imageUrl = "<%~ it.artist.image %>" 
+  , shortName = "<%~ it.artist.shortname %>"
+  , httpFriendlyShortName = "<%~ it.artist.httpFriendlyShortName %>"
+  }
+
+
+albumStorage : Array Album
+albumStorage =
+    [ { id = "<%~ it.firstAlbum.id %>"
+      , name = "<%~ it.firstAlbum.name %>"
+      , urlToOpen = "<%~ it.firstAlbum.url_to_open %>"
+      , covers =
+            [ { url = "<%~ it.firstAlbum.firstImage.url %>"
+              , width = <%~ it.firstAlbum.firstImage.width %> 
+              , height = <%~ it.firstAlbum.firstImage.height %> 
+              }
+<% it.firstAlbum.images.forEach(function(album){ %>
+            , { url = "<%~ album.url %>"
+              , width = <%~ album.width %> 
+              , height = <%~ album.height %> 
+              }
+<% }) %>
+            ] }
+<% it.albums.forEach(function(album){ %>
+    , { id = "<%~ album.id %>"
+      , name = "<%~ album.name %>"
+      , urlToOpen = "<%~ album.url_to_open %>"
+      , covers =
+            [ { url = "<%~ album.firstImage.url %>" 
+              , width = <%~ album.firstImage.width %> 
+              , height = <%~ album.firstImage.height%> 
+              }
+<% album.images.forEach(function(image){ %>
+            , { url = "<%~ image.url %>"
+              , width = <%~ image.width %> 
+              , height = <%~ image.height %> 
+              }
+<% }) %>
+            ]
+      }
+<% }) %>
+    ] |> Array.fromList
