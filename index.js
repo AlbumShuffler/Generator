@@ -5,7 +5,7 @@ import https from 'https';
 
 const eta = new Eta({ views: './templates', debug: true })
 
-const artistListUrl = 'https://raw.githubusercontent.com/b0wter/shuffler-albums/main/source.json';
+const artistListUrl = 'https://raw.githubusercontent.com/b0wter/shuffler-albums/main/input/source.json';
 
 async function getArtistSources() {
     const res = await fetch(artistListUrl);
@@ -13,13 +13,13 @@ async function getArtistSources() {
 }
 
 async function getArtistDetails(artistId) {
-    const url = `https://raw.githubusercontent.com/b0wter/shuffler-albums/main/data/${artistId}/artist`
+    const url = `https://raw.githubusercontent.com/b0wter/shuffler-albums/main/output/${artistId}/artist`
     const res = await fetch(url);
     return await res.json();   
 }
 
 async function getAlbumsForArtist(artistId) {
-    const url = `https://raw.githubusercontent.com/b0wter/shuffler-albums/main/data/${artistId}/albums`;
+    const url = `https://raw.githubusercontent.com/b0wter/shuffler-albums/main/output/${artistId}/albums`;
     const res = await fetch(url);
     return await res.json();
 }
