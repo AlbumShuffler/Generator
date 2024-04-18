@@ -6,10 +6,13 @@ import Albums exposing (Album, ArtistInfo)
 
 artistInfo : ArtistInfo
 artistInfo =
-  { name = "<%~ it.artist.name %>" 
+  { id = "<%~ it.artist.id %>"
+  , name = "<%~ it.artist.name %>" 
   , imageUrl = "<%~ it.artist.image %>" 
   , shortName = "<%~ it.artist.shortname %>"
   , httpFriendlyShortName = "<%~ it.artist.httpFriendlyShortName %>"
+  , coverColorA = "<%~ it.artist.coverColorA %>"
+  , coverColorB = "<%~ it.artist.coverColorB %>"
   }
 
 
