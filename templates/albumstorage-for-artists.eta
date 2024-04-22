@@ -2,15 +2,17 @@ module AlbumStorage<%~ it.moduleName %> exposing ( albumStorage, artistInfo )
 
 import Array exposing(Array)
 import Albums exposing (Album, ArtistInfo)
-
+import ArtistIds exposing (ArtistId(..))
+import AlbumIds exposing (AlbumId(..))
 
 artistInfo : ArtistInfo
 artistInfo =
-  { id = "<%~ it.artist.id %>"
+  { id = "<%~ it.artist.id %>" |> ArtistId
   , name = "<%~ it.artist.name %>" 
   , imageUrl = "<%~ it.artist.image %>" 
-  , shortName = "<%~ it.artist.shortname %>"
+  , shortName = "<%~ it.artist.shortName %>"
   , httpFriendlyShortName = "<%~ it.artist.httpFriendlyShortName %>"
+  , icon = "<%~ it.artist.icon %>"
   , coverColorA = "<%~ it.artist.coverColorA %>"
   , coverColorB = "<%~ it.artist.coverColorB %>"
   }
@@ -18,7 +20,7 @@ artistInfo =
 
 albumStorage : Array Album
 albumStorage =
-    [ { id = "<%~ it.firstAlbum.id %>"
+    [ { id = "<%~ it.firstAlbum.id %>" |> AlbumId
       , name = "<%~ it.firstAlbum.name %>"
       , urlToOpen = "<%~ it.firstAlbum.url_to_open %>"
       , covers =
@@ -34,7 +36,7 @@ albumStorage =
 <% }) %>
             ] }
 <% it.albums.forEach(function(album){ %>
-    , { id = "<%~ album.id %>"
+    , { id = "<%~ album.id %>" |> AlbumId
       , name = "<%~ album.name %>"
       , urlToOpen = "<%~ album.url_to_open %>"
       , covers =
