@@ -1,27 +1,36 @@
 import { Eta } from 'eta'
 import path from 'path';
 import fs from 'fs';
-import https from 'https';
 
 const eta = new Eta({ views: './templates', debug: true })
 
-const artistListUrl = 'https://raw.githubusercontent.com/b0wter/shuffler-albums/main/input/source.json';
+const pat = '<insert pat here>';
 
-async function getArtistSources() {
-    const res = await fetch(artistListUrl);
-    return await res.json();
+const authOptions = {
+    headers: {
+        'Authorization': `token ${pat}`,
+        'User-Agent': 'b0wter'
+    }
+};
+
+async function getJsonFromUrl(url) {
+    const res = await fetch(url, authOptions);
+    return res.json();
 }
 
-async function getArtistDetails(artistId) {
-    const url = `https://raw.githubusercontent.com/b0wter/shuffler-albums/main/output/${artistId}/artist`
-    const res = await fetch(url);
-    return await res.json();   
+function getArtistSources() {
+    const url = 'https://raw.githubusercontent.com/AlbumShuffler/Albums/main/input/source.json';
+    return getJsonFromUrl(url);
 }
 
-async function getAlbumsForArtist(artistId) {
-    const url = `https://raw.githubusercontent.com/b0wter/shuffler-albums/main/output/${artistId}/albums`;
-    const res = await fetch(url);
-    return await res.json();
+function getArtistDetails(artistId) {
+    const url = `https://raw.githubusercontent.com/AlbumShuffler/Albums/main/output/${artistId}/artist`;
+    return getJsonFromUrl(url);
+}
+
+function getAlbumsForArtist(artistId) {
+    const url = `https://raw.githubusercontent.com/AlbumShuffler/Albums/main/output/${artistId}/albums`;
+    return getJsonFromUrl(url);
 }
 
 function renderArtistAlbumStorageTemplate(artistDetails, albums, moduleName) {
@@ -59,33 +68,51 @@ function writeTextToFile(content, filename) {
     fs.writeFileSync(filename, content, 'utf8')
 }
 
-async function handleArtist(artistId) {
+async function handleArtist(artistId, destinationFolder) {
     const artistDetails = await getArtistDetails(artistId);
     const albums = await getAlbumsForArtist(artistId);
     const moduleName = artistDetails.httpFriendlyShortName[0].toUpperCase() + artistDetails.httpFriendlyShortName.slice(1);
     const template = renderArtistAlbumStorageTemplate(artistDetails, albums, moduleName);
-    writeTextToFile(template, `AlbumStorage${moduleName}.elm`)
+    writeTextToFile(template, path.join(destinationFolder, `AlbumStorage${moduleName}.elm`));
+}
+
+function getDestination() {
+    const destination = process.argv[2] || 'output';
+    console.log('Got destination', destination);
+    return destination;
+}
+
+function makeSureFolderExists(path) {
+    if (!fs.existsSync(path)) {
+        fs.mkdirSync(path);
+    }
+}
+
+function throwIfThereAreDuplicates(artistShortNames) {
+    if (new Set(artistShortNames).size !== artistShortNames.length) {
+        console.error(new Set(artistShortNames), artistShortNames)
+        throw new Error('There are duplicate http friendly short names')
+    }
 }
 
 (async () => {
     try {
+        const destination = getDestination();
+        makeSureFolderExists(destination);
+
         const artistSources = await getArtistSources();
         const artistShortNames = artistSources.map(a => a.httpFriendlyShortName);
+        throwIfThereAreDuplicates(artistShortNames);
+
         const artistIds = artistSources.map(a => a.id);
-
-        if (new Set(artistShortNames).size !== artistShortNames.length) {
-            console.error(new Set(artistShortNames), artistShortNames)
-            throw new Error('There are duplicate http friendly short names')
-        }
-
         console.log('Got artist ids', artistIds);
         for(const artistId of artistIds) {
             console.log('Handling artist', artistId);
-            handleArtist(artistId);
+            handleArtist(artistId, destination);
         }
         
         const global = renderGlobalAlbumStorageTemplate(artistShortNames.map(n => n[0].toUpperCase() + n.slice(1)));
-        writeTextToFile(global, `ArtistsWithAlbums.elm`)
+        writeTextToFile(global, path.join(destination, `ArtistsWithAlbums.elm`));
     } catch(err) {
         console.log('Could not get artist list because', err);
     }
