@@ -4,33 +4,41 @@ import fs from 'fs';
 
 const eta = new Eta({ views: './templates', debug: true })
 
-const pat = '<insert pat here>';
-
-const authOptions = {
-    headers: {
-        'Authorization': `token ${pat}`,
-        'User-Agent': 'b0wter'
+function createAuthOptions(accessToken) {
+    if (!accessToken) {
+        throw new Error('Cannot create auth options without access token');
     }
-};
+    return {
+        headers: {
+            'Authorization': `token ${accessToken}`
+        }
+    };
+}
 
-async function getJsonFromUrl(url) {
+function getAccessToken() {
+    const fromArg = process.argv.slice(2).find(arg => arg.startsWith("--token="));
+    const formEnv = process.env.SPOTIFY_ALBUM_REPO_ACCESS_TOKEN;
+    return fromArg ? fromArg.split('=')[1] : formEnv;
+}
+
+async function getJsonFromUrl(url, authOptions) {
     const res = await fetch(url, authOptions);
     return res.json();
 }
 
-function getArtistSources() {
+function getArtistSources(authOptions) {
     const url = 'https://raw.githubusercontent.com/AlbumShuffler/Albums/main/input/source.json';
-    return getJsonFromUrl(url);
+    return getJsonFromUrl(url, authOptions);
 }
 
-function getArtistDetails(artistId) {
+function getArtistDetails(artistId, authOptions) {
     const url = `https://raw.githubusercontent.com/AlbumShuffler/Albums/main/output/${artistId}/artist`;
-    return getJsonFromUrl(url);
+    return getJsonFromUrl(url, authOptions);
 }
 
-function getAlbumsForArtist(artistId) {
+function getAlbumsForArtist(artistId, authOptions) {
     const url = `https://raw.githubusercontent.com/AlbumShuffler/Albums/main/output/${artistId}/albums`;
-    return getJsonFromUrl(url);
+    return getJsonFromUrl(url, authOptions);
 }
 
 function renderArtistAlbumStorageTemplate(artistDetails, albums, moduleName) {
@@ -68,16 +76,19 @@ function writeTextToFile(content, filename) {
     fs.writeFileSync(filename, content, 'utf8')
 }
 
-async function handleArtist(artistId, destinationFolder) {
-    const artistDetails = await getArtistDetails(artistId);
-    const albums = await getAlbumsForArtist(artistId);
+async function handleArtist(artistId, destinationFolder, authOptions) {
+    const artistDetails = await getArtistDetails(artistId, authOptions);
+    const albums = await getAlbumsForArtist(artistId, authOptions);
+    console.log('Found', albums.length, 'albums for', artistDetails.name);
     const moduleName = artistDetails.httpFriendlyShortName[0].toUpperCase() + artistDetails.httpFriendlyShortName.slice(1);
     const template = renderArtistAlbumStorageTemplate(artistDetails, albums, moduleName);
     writeTextToFile(template, path.join(destinationFolder, `AlbumStorage${moduleName}.elm`));
 }
 
 function getDestination() {
-    const destination = process.argv[2] || 'output';
+    const fromArgs = process.argv.slice(2).find(arg => arg.startsWith("--destination="));
+    const fallback = 'output';
+    const destination = fromArgs ? fromArgs.split('=')[1] : fallback;
     console.log('Got destination', destination);
     return destination;
 }
@@ -97,10 +108,11 @@ function throwIfThereAreDuplicates(artistShortNames) {
 
 (async () => {
     try {
+        const authOptions = createAuthOptions(getAccessToken());
         const destination = getDestination();
         makeSureFolderExists(destination);
 
-        const artistSources = await getArtistSources();
+        const artistSources = await getArtistSources(authOptions);
         const artistShortNames = artistSources.map(a => a.httpFriendlyShortName);
         throwIfThereAreDuplicates(artistShortNames);
 
@@ -108,7 +120,7 @@ function throwIfThereAreDuplicates(artistShortNames) {
         console.log('Got artist ids', artistIds);
         for(const artistId of artistIds) {
             console.log('Handling artist', artistId);
-            handleArtist(artistId, destination);
+            handleArtist(artistId, destination, authOptions);
         }
         
         const global = renderGlobalAlbumStorageTemplate(artistShortNames.map(n => n[0].toUpperCase() + n.slice(1)));
