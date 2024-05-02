@@ -23,6 +23,11 @@ function getAccessToken() {
 
 async function getJsonFromUrl(url, authOptions) {
     const res = await fetch(url, authOptions);
+    if (!res.ok && res.status === 404) {
+        throw new Error(`Encountered a 404 while accesing '${url}', did you supply a valid access token?`);
+    } else if(!res.ok) {
+        throw new Error(`Error accessing '${url}': ${res.status} ${res.statusText}`);
+    }
     return res.json();
 }
 
