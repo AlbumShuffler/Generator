@@ -15,6 +15,10 @@ artistInfo =
   , icon = "<%~ it.artist.icon %>"
   , coverColorA = "<%~ it.artist.coverColorA %>"
   , coverColorB = "<%~ it.artist.coverColorB %>"
+  , coverCenterX = <%~ it.artist.coverCenterX %> 
+  , coverCenterY = <%~ it.artist.coverCenterY %> 
+  , altCoverCenterX = <%~ it.artist.altCoverCenterX %> 
+  , altCoverCenterY = <%~ it.artist.altCoverCenterY %> 
   }
 
 
