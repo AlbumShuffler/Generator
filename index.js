@@ -40,7 +40,7 @@ async function getArtistDetails(artistId, authOptions) {
     const url = `https://raw.githubusercontent.com/AlbumShuffler/Albums/main/output/${artistId}/artist`;
     const artistDetails = await getJsonFromUrl(url, authOptions);
     artistDetails.coverCenterX = artistDetails.coverCenterX ? artistDetails.coverCenterX : 50;
-    artistDetails.coverCenterY = artistDetails.coverCenterY ? artistDetails.coverCenterX : 50;
+    artistDetails.coverCenterY = artistDetails.coverCenterY ? artistDetails.coverCenterY : 50;
     artistDetails.altCoverCenterX = artistDetails.altCoverCenterX ? "Just " + artistDetails.altCoverCenterX : "Nothing";
     artistDetails.altCoverCenterY = artistDetails.altCoverCenterY ? "Just " + artistDetails.altCoverCenterY : "Nothing";
     return artistDetails;
