@@ -43,19 +43,20 @@ function getRemoteImageDimensions(imageUrl) {
     return new Promise((resolve, reject) => {
         const req = https.get(options, (response) => {
             const chunks = [];
+            const getImageSizeFromChunks = (chunks) => sizeOf(Buffer.concat(chunks));
             response.on("data", (chunk) => {
                 chunks.push(chunk);
                 const numberOfReceivedBytes = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
                 if(numberOfReceivedBytes >= NUMBER_OF_REQUIRED_BYTES_FOR_IMAGE_HEAD) {
                     console.log(`Got enough bytes (required >= ${NUMBER_OF_REQUIRED_BYTES_FOR_IMAGE_HEAD} got ${numberOfReceivedBytes}) to check the image header, ending request prematurely`)
-                    // Calling will still trigger the 'end' event.
                     response.destroy(); 
+                    resolve(getImageSizeFromChunks(chunks));
                 }
             });
 
             response.on("end", () => {
-                const dimensions = sizeOf(Buffer.concat(chunks));
-                resolve(dimensions);
+                console.log('Downloaded the entire image');
+                resolve(getImageSizeFromChunks(chunks));
             });
 
             req.end();
@@ -204,7 +205,7 @@ function throwIfThereAreDuplicates(artistShortNames) {
         console.log('Got artist ids', artistIds);
         for(const artistId of artistIds) {
             console.log('Handling artist', artistId);
-            handleArtist(artistId, destination, authOptions);
+            await handleArtist(artistId, destination, authOptions);
         }
         
         const global = renderGlobalAlbumStorageTemplate(artistShortNames.map(n => n[0].toUpperCase() + n.slice(1)));
