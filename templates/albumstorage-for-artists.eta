@@ -9,7 +9,13 @@ artistInfo : ArtistInfo
 artistInfo =
   { id = "<%~ it.artist.id %>" |> ArtistId
   , name = "<%~ it.artist.name %>" 
-  , imageUrl = "<%~ it.artist.image %>" 
+  , images = 
+      [ { url = "<%~ it.artist.images[0].url %>" 
+        , width = <%~ it.artist.images[0].width %> 
+        , height = <%~ it.artist.images[0].height %> }<% if(it.artist.images.length > 1) { %><% it.artist.images.slice(1).forEach(function(image) { %> 
+      , { url = "<%~ image.url %>"
+        , width = <%~ image.width %> 
+        , height = <%~ image.height %> } <% }) %><% } %>]
   , shortName = "<%~ it.artist.shortName %>"
   , httpFriendlyShortName = "<%~ it.artist.httpFriendlyShortName %>"
   , icon = "<%~ it.artist.icon %>"

@@ -10,6 +10,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "eta": "^3.4.0"
+    "eta": "^3.4.0",
+    "image-size": "^1.1.1"
   }
 }

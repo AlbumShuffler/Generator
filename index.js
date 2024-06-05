@@ -1,8 +1,13 @@
 import { Eta } from 'eta'
 import path from 'path';
 import fs from 'fs';
+import url from 'url'
+import https from 'https'
+import sizeOf from 'image-size'
 
 const eta = new Eta({ views: './templates', debug: true })
+
+const NUMBER_OF_REQUIRED_BYTES_FOR_IMAGE_HEAD = 5000;
 
 function createAuthOptions(accessToken) {
     if (!accessToken) {
@@ -19,6 +24,65 @@ function getAccessToken() {
     const fromArg = process.argv.slice(2).find(arg => arg.startsWith("--token="));
     const formEnv = process.env.SPOTIFY_ALBUM_REPO_ACCESS_TOKEN;
     return fromArg ? fromArg.split('=')[1] : formEnv;
+}
+
+/**
+ * @typedef {Object} Dimensions
+ * @property {number} width
+ * @property {number} height
+ */
+
+/**
+ * Returns the dimensions of an image hosted on the web
+ * @param {string} imageUrl
+ * @return {Promise<Dimensions>}
+ */
+function getRemoteImageDimensions(imageUrl) {
+    // Wrapping the Request in a promise so it's nicer to use in an async function
+    const options = url.parse(imageUrl)
+    return new Promise((resolve, reject) => {
+        const req = https.get(options, (response) => {
+            const chunks = [];
+            response.on("data", (chunk) => {
+                chunks.push(chunk);
+                const numberOfReceivedBytes = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
+                if(numberOfReceivedBytes >= NUMBER_OF_REQUIRED_BYTES_FOR_IMAGE_HEAD) {
+                    console.log(`Got enough bytes (required >= ${NUMBER_OF_REQUIRED_BYTES_FOR_IMAGE_HEAD} got ${numberOfReceivedBytes}) to check the image header, ending request prematurely`)
+                    // Calling will still trigger the 'end' event.
+                    response.destroy(); 
+                }
+            });
+
+            response.on("end", () => {
+                const dimensions = sizeOf(Buffer.concat(chunks));
+                resolve(dimensions);
+            });
+
+            req.end();
+        });
+    });
+}
+
+async function sleep(milliSeconds) {
+    return new Promise((resolve) =>setTimeout(resolve, milliSeconds));
+}
+
+async function doubleRetryGetRemoteImageDimensions(imageUrl) {
+    // This is not a good way to make things happen but it solved all problems =)
+    try {
+        return await getRemoteImageDimensions(imageUrl);
+    } catch(error) {
+        console.warn('Error on first attempt of retrieving remote image dimensions', error);
+        try {
+            await sleep(500);
+            return await getRemoteImageDimensions(imageUrl);
+        } catch(error) {
+            console.warn('Error on second attempt of retrieving remote image dimensions', error);
+            await sleep(500);
+            console.log('Trying a final time');
+            return await getRemoteImageDimensions(imageUrl);
+        }
+    }
 }
 
 async function getJsonFromUrl(url, authOptions) {
@@ -43,6 +107,16 @@ async function getArtistDetails(artistId, authOptions) {
     artistDetails.coverCenterY = artistDetails.coverCenterY ? artistDetails.coverCenterY : 50;
     artistDetails.altCoverCenterX = artistDetails.altCoverCenterX ? "Just " + artistDetails.altCoverCenterX : "Nothing";
     artistDetails.altCoverCenterY = artistDetails.altCoverCenterY ? "Just " + artistDetails.altCoverCenterY : "Nothing";
+    const updatedImagePromises = artistDetails.images.map(async image => {
+        if(!image.width || !image.height) {
+            console.log('Missing width/height data for artist', artistId)
+            const dimensions = await doubleRetryGetRemoteImageDimensions(image.url)
+            image.width = dimensions.width;
+            image.height = dimensions.height;
+        }
+        return image;
+    });
+    const updatedImages = await Promise.all(updatedImagePromises);
     return artistDetails;
 }
 
