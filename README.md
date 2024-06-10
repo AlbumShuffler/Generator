@@ -26,7 +26,7 @@ and turns it into multiple (three, in this case) Elm files.
 Additional data from Spotify is required. I have a set of bash scripts that authenticate with the Spotify web api and download everything. However, they are not public yet. I am working on that :)
 
 ## Usage
-**This project currently has hardocded data pointing to a private GitHub repository. If you want to use it you need to change the urls yourself or wait for me to make everything configurable :)*
+**This project currently has hardocded data pointing to a private GitHub repository. If you want to use it you need to change the urls yourself or wait for me to make everything configurable :)**
 
 Clone the repository, install all dependencies and run the script:
 ```
