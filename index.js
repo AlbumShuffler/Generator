@@ -9,6 +9,11 @@ const eta = new Eta({ views: './templates', debug: true })
 
 const NUMBER_OF_REQUIRED_BYTES_FOR_IMAGE_HEAD = 5000;
 
+/**
+ * Creates authentication headers for the Spotify api based on the given access token
+ * @param {String} accessToken 
+ * @returns {Headers}
+ */
 function createAuthOptions(accessToken) {
     if (!accessToken) {
         throw new Error('Cannot create auth options without access token');
@@ -20,10 +25,85 @@ function createAuthOptions(accessToken) {
     };
 }
 
-function getAccessToken() {
-    const fromArg = process.argv.slice(2).find(arg => arg.startsWith("--token="));
-    const formEnv = process.env.SPOTIFY_ALBUM_REPO_ACCESS_TOKEN;
+/**
+ * @typedef {Object} Config
+ * @property {String} sourceUrl
+ * @property {String} artistDetailsUrl
+ * @property {String} albumsUrl
+ */
+
+/**
+ * Reads the config file and returns its content as an object
+ * @param {String} filename name of the config file
+ * @returns {Config}
+ */
+function getConfigFromFile(filename) {
+    try {
+        return JSON.parse(fs.readFileSync(filename, 'utf8'));
+    } catch(error) {
+        console.error('Could not open config file because:', error);
+        throw(error);
+    }
+}
+
+function getConfigFromEnvironment() {
+    const sourceUrl = {
+        name: "source url",
+        evName: "ALBUM_SHUFFLER_GENERATOR_SOURCE_URL",
+        setter: (url, target) => target.sourceUrl = url
+    }
+    const artistDetailsUrl = {
+        name: "artist details url",
+        evName: "ALBUM_SHUFFLER_GENERATOR_ARTIST_DETAILS_URL",
+        setter: (url, target) => target.artistDetailsUrl = url
+    }
+    const albumsUrl = {
+        name: "source url",
+        evName: "ALBUM_SHUFFLER_GENERATOR_ALBUMS_URL",
+        setter: (url, target) => target.albumsUrl = url
+    }
+
+    const config = {};
+    for (const entry of [sourceUrl, artistDetailsUrl, albumsUrl]) {
+        const value = process.env[entry.evName];
+        if(!value) {
+            throw new Error(`Cannot create config from environment variable because the ${entry.name} could not be read from the environment variable ${entry.evName}`);
+        } else {
+            entry.setter(value, config);
+        }
+    }
+
+    return config;
+}
+
+/**
+ * Tries to get a value from the cli arguments. Tries to read a value from the environment
+ * variables if there is none
+ * @param {String} argumentName 
+ * @param {String} environmentVariableName 
+ * @returns {String|undefined} Contents of the argument/ev or `undefined` if nothing is found
+ */
+function getFromArgumentOrEnv(argumentName, environmentVariableName) {
+    const parameter = `--${argumentName}=`;
+    const fromArg = process.argv.find(arg => arg.startsWith(parameter));
+    const formEnv = process.env[environmentVariableName];
     return fromArg ? fromArg.split('=')[1] : formEnv;
+}
+
+/**
+ * Tries to read a GitHub access token from the command line arguments or the environment variables.
+ * Cli arguments take precedence over environment variables
+ */
+function getAccessToken() {
+    return getFromArgumentOrEnv('token', 'SPOTIFY_ALBUM_REPO_ACCESS_TOKEN');
+}
+
+/**
+ * Checks the command line arguments for a config file. Returns a default value if none is found.
+ * Defaults to `config.json`
+ */
+function getConfigFilename() {
+    return getFromArgumentOrEnv('config', 'ALBUM_SHUFFLER_GENERATOR_CONFIG');
 }
 
 /**
@@ -44,7 +124,7 @@ function getRemoteImageDimensions(imageUrl) {
         const req = https.get(options, (response) => {
             const chunks = [];
             const getImageSizeFromChunks = (chunks) => sizeOf(Buffer.concat(chunks));
-            response.on("data", (chunk) => {
+            response.on('data', (chunk) => {
                 chunks.push(chunk);
                 const numberOfReceivedBytes = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
                 if(numberOfReceivedBytes >= NUMBER_OF_REQUIRED_BYTES_FOR_IMAGE_HEAD) {
@@ -54,7 +134,7 @@ function getRemoteImageDimensions(imageUrl) {
                 }
             });
 
-            response.on("end", () => {
+            response.on('end', () => {
                 console.log('Downloaded the entire image');
                 resolve(getImageSizeFromChunks(chunks));
             });
@@ -68,6 +148,14 @@ async function sleep(milliSeconds) {
     return new Promise((resolve) =>setTimeout(resolve, milliSeconds));
 }
 
+/**
+ * Downloads an image to check the image dimensions.
+ * Tries a second and third time if the download fails.
+ * Tries to parse the image dimensions from the image header.
+ * Most images will not be downloaded completely
+ * @param {String} imageUrl url of the image to get dimensions from
+ * @returns 
+ */
 async function doubleRetryGetRemoteImageDimensions(imageUrl) {
     // This is not a good way to make things happen but it solved all problems =)
     try {
@@ -86,6 +174,12 @@ async function doubleRetryGetRemoteImageDimensions(imageUrl) {
     }
 }
 
+/**
+ * Downloads arbitrary json from a remote url
+ * @param {String} url 
+ * @param {Headers} authOptions 
+ * @returns {Object} parsed object
+ */
 async function getJsonFromUrl(url, authOptions) {
     const res = await fetch(url, authOptions);
     if (!res.ok && res.status === 404) {
@@ -96,18 +190,25 @@ async function getJsonFromUrl(url, authOptions) {
     return res.json();
 }
 
-function getArtistSources(authOptions) {
-    const url = 'https://raw.githubusercontent.com/AlbumShuffler/Albums/main/input/source.json';
+function getArtistSources(authOptions, url) {
     return getJsonFromUrl(url, authOptions);
 }
 
-async function getArtistDetails(artistId, authOptions) {
-    const url = `https://raw.githubusercontent.com/AlbumShuffler/Albums/main/output/${artistId}/artist`;
+/**
+ * Gets the artist details from a remote url
+ * @param {String} artistId 
+ * @param {Headers} authOptions 
+ * @param {String} url Url template to download artist details. Templates need to contain the string `"${artistId}"` 
+ * that will be replaced with the given artist id
+ * @returns 
+ */
+async function getArtistDetails(artistId, authOptions, url) {
+    url = url.replace('${artistId}', artistId);
     const artistDetails = await getJsonFromUrl(url, authOptions);
     artistDetails.coverCenterX = artistDetails.coverCenterX ? artistDetails.coverCenterX : 50;
     artistDetails.coverCenterY = artistDetails.coverCenterY ? artistDetails.coverCenterY : 50;
-    artistDetails.altCoverCenterX = artistDetails.altCoverCenterX ? "Just " + artistDetails.altCoverCenterX : "Nothing";
-    artistDetails.altCoverCenterY = artistDetails.altCoverCenterY ? "Just " + artistDetails.altCoverCenterY : "Nothing";
+    artistDetails.altCoverCenterX = artistDetails.altCoverCenterX ? 'Just ' + artistDetails.altCoverCenterX : 'Nothing';
+    artistDetails.altCoverCenterY = artistDetails.altCoverCenterY ? 'Just ' + artistDetails.altCoverCenterY : 'Nothing';
     const updatedImagePromises = artistDetails.images.map(async image => {
         if(!image.width || !image.height) {
             console.log('Missing width/height data for artist', artistId)
@@ -121,8 +222,16 @@ async function getArtistDetails(artistId, authOptions) {
     return artistDetails;
 }
 
-function getAlbumsForArtist(artistId, authOptions) {
-    const url = `https://raw.githubusercontent.com/AlbumShuffler/Albums/main/output/${artistId}/albums`;
+/**
+ * Downloads album metadata for the given artist
+ * @param {String} artistId 
+ * @param {Headers} authOptions 
+ * @param {String} url Url template to download the album data. Templates need to contain the string `"${artistId}"` 
+ * that will be replaced with the given artist id
+ * @returns {Array}
+ */
+function getAlbumsForArtist(artistId, authOptions, url) {
+    url = url.replace('${artistId}', artistId);
     return getJsonFromUrl(url, authOptions);
 }
 
@@ -133,7 +242,7 @@ function renderArtistAlbumStorageTemplate(artistDetails, albums, moduleName) {
             if (album.images.length > 1) {
                 album.images.shift();
             }
-            if (album.name.includes("\"")) {
+            if (album.name.includes('\"')) {
                 album.name = album.name.replaceAll('\"', '\\\"');
             }
             return album;
@@ -161,9 +270,19 @@ function writeTextToFile(content, filename) {
     fs.writeFileSync(filename, content, 'utf8')
 }
 
-async function handleArtist(artistId, destinationFolder, authOptions) {
-    const artistDetails = await getArtistDetails(artistId, authOptions);
-    const albums = await getAlbumsForArtist(artistId, authOptions);
+/**
+ * Gets the artist details and albm data for the given artist
+ * @param {String} artistId 
+ * @param {String} destinationFolder
+ * @param {Headers} authOptions 
+ * @param {String} artistDetailsUrl Url template to download the artist details. Templates need to contain the string `"${artistId}"` 
+ * that will be replaced with the given artist id
+ * @param {String} albumsUrl Url template to download the album data. Templates need to contain the string `"${artistId}"` 
+ * that will be replaced with the given artist id
+ */
+async function handleArtist(artistId, destinationFolder, authOptions, artistDetailsUrl, albumsUrl) {
+    const artistDetails = await getArtistDetails(artistId, authOptions, artistDetailsUrl);
+    const albums = await getAlbumsForArtist(artistId, authOptions, albumsUrl);
     console.log('Found', albums.length, 'albums for', artistDetails.name);
     const moduleName = artistDetails.httpFriendlyShortName[0].toUpperCase() + artistDetails.httpFriendlyShortName.slice(1);
     const template = renderArtistAlbumStorageTemplate(artistDetails, albums, moduleName);
@@ -171,10 +290,10 @@ async function handleArtist(artistId, destinationFolder, authOptions) {
 }
 
 function getDestination() {
-    const fromArgs = process.argv.slice(2).find(arg => arg.startsWith("--destination="));
+    const fromArgs = process.argv.slice(2).find(arg => arg.startsWith('--destination='));
     const fallback = 'output';
     const destination = fromArgs ? fromArgs.split('=')[1] : fallback;
-    console.log('Got destination', destination);
+    console.log(`Using destination: '${destination}'`);
     return destination;
 }
 
@@ -195,9 +314,18 @@ function throwIfThereAreDuplicates(artistShortNames) {
     try {
         const authOptions = createAuthOptions(getAccessToken());
         const destination = getDestination();
-        makeSureFolderExists(destination);
+        const configFilename = getConfigFilename();
+        let config = null;
+        if(configFilename) {
+            console.log(`Using config file: ${configFilename}`);
+            config = getConfigFromFile(configFilename);
+        } else {
+            console.log('No config file argument given, trying to create config from environment variables');
+            config = getConfigFromEnvironment();
+        }
 
-        const artistSources = await getArtistSources(authOptions);
+        makeSureFolderExists(destination);
+        const artistSources = await getArtistSources(authOptions, config.sourceUrl);
         const artistShortNames = artistSources.map(a => a.httpFriendlyShortName);
         throwIfThereAreDuplicates(artistShortNames);
 
@@ -205,7 +333,7 @@ function throwIfThereAreDuplicates(artistShortNames) {
         console.log('Got artist ids', artistIds);
         for(const artistId of artistIds) {
             console.log('Handling artist', artistId);
-            await handleArtist(artistId, destination, authOptions);
+            await handleArtist(artistId, destination, authOptions, config.artistDetailsUrl, config.albumsUrl);
         }
         
         const global = renderGlobalAlbumStorageTemplate(artistShortNames.map(n => n[0].toUpperCase() + n.slice(1)));
