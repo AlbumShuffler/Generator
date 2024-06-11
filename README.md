@@ -1,5 +1,11 @@
 # Spotify Album Shuffler
-This is part of the album shuffler project. This repository is used to create the required Elm code for the actual [web app](https://github.com/AlbumShuffler/Frontend). It takes an input file like the following:
+This is part of the album shuffler project. This repository is used to create the required Elm code for the actual [web app](https://github.com/AlbumShuffler/Frontend).
+
+## Configuration
+The generator requires several input files to generate Elm code.
+
+### Source file
+First, you need to define the "source". It is a JSON file in the following form:
 ```
 [ { "shortName": "Short 1"
   , "httpFriendlyShortName": "short1"
@@ -21,9 +27,13 @@ This is part of the album shuffler project. This repository is used to create th
   , "coverColorB": "#000099" }
 ]
 ```
-and turns it into multiple (three, in this case) Elm files.
+It defines the artists that will later show up in the web app. All fields except the `id` and `type` field may be chosen as you see fit. The `type` field needs to either be set to `artist` or `playlist`. The `id` fields needs to contain the `id` of the artist or playlist that is used by Spotify for identification. The easiest way is to use the Spotify web interface and grab the ids from the current url.
 
-Additional data from Spotify is required. I have a set of bash scripts that authenticate with the Spotify web api and download everything. See [this repository](https://github.com/AlbumShuffler/DataRetriever) for details.
+### Spotify metadata
+Additional data from Spotify is required. There is a set of bash scripts that authenticate with the Spotify web api and download everything. See [this repository](https://github.com/AlbumShuffler/DataRetriever) for details. The scripts use **the same source file** as this generator. Its output will be several folders each with two files in them:
+
+1. `artist` - contains artist/playlist details
+2. `albums` - contains a list of all the albums of the given artist/in The scripts will automatically
 
 ## Usage
 Clone the repository and install all dependencies and run the script:
@@ -32,7 +42,15 @@ git clone https://github.com/AlbumShuffler/Generator.git shuffler-generator
 cd shuffler-generator
 npm i
 ```
-Configuration can be done in one of two ways:
+Define a source file and get all the metadata using the approach described above. The generator needs three urls/paths to work properly:
+
+1. location of the source file
+2. location of the artist details
+3. location of the albums for each artist/playlist
+
+The location may either be files or https urls. File paths need to be prefixed with `file://` (e.g. `file:///path/to/my/files/${artistId}/albums`). For 2. & 3. all occurances of the string `${artistId}` will be replaced by proper artist ids.
+
+There are two ways to configure the generator: by using a config file or environment variables.
 
 ### Configuration by file
 Create a file like this:
