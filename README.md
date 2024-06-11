@@ -48,7 +48,7 @@ Define a source file and get all the metadata using the approach described above
 2. location of the artist details
 3. location of the albums for each artist/playlist
 
-The location may either be files or https urls. File paths need to be prefixed with `file://` (e.g. `file:///path/to/my/files/${artistId}/albums`). For 2. & 3. all occurances of the string `${artistId}` will be replaced by proper artist ids.
+The location may either be files or https urls. File paths need to be prefixed with `file://` (e.g. `file:///path/to/my/files/${artistId}/albums`). For 2. & 3. all occurrences of the string `${artistId}` will be replaced by proper artist ids.
 
 There are two ways to configure the generator: by using a config file or environment variables.
 
