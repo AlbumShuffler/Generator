@@ -218,7 +218,7 @@ function getArtistSources(authOptions, url) {
  * @returns 
  */
 async function getArtistDetails(artistId, authOptions, url) {
-    url = url.replace('${artistId}', artistId);
+    url = url.replaceAll('${artistId}', artistId);
     const artistDetails = await getJson(url, authOptions);
     artistDetails.coverCenterX = artistDetails.coverCenterX ? artistDetails.coverCenterX : 50;
     artistDetails.coverCenterY = artistDetails.coverCenterY ? artistDetails.coverCenterY : 50;
@@ -246,7 +246,7 @@ async function getArtistDetails(artistId, authOptions, url) {
  * @returns {Array}
  */
 function getAlbumsForArtist(artistId, authOptions, url) {
-    url = url.replace('${artistId}', artistId);
+    url = url.replaceAll('${artistId}', artistId);
     return getJson(url, authOptions);
 }
 
