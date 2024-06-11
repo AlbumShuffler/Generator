@@ -12,11 +12,11 @@ const NUMBER_OF_REQUIRED_BYTES_FOR_IMAGE_HEAD = 5000;
 /**
  * Creates authentication headers for the Spotify api based on the given access token
  * @param {String} accessToken 
- * @returns {Headers}
+ * @returns {Headers | null}
  */
 function createAuthOptions(accessToken) {
     if (!accessToken) {
-        throw new Error('Cannot create auth options without access token');
+        return null;
     }
     return {
         headers: {
@@ -190,8 +190,23 @@ async function getJsonFromUrl(url, authOptions) {
     return res.json();
 }
 
+function getJsonFromFile(filename) {
+    return JSON.parse(fs.readFileSync(filename, 'utf-8'));
+}
+
+async function getJson(url, authOptions) {
+    if(url.startsWith('https://')) {
+        return await getJsonFromUrl(url, authOptions);
+    } else if(url.startsWith('file://')) {
+        const filename = url.replace('file://', '');
+        return getJsonFromFile(filename);
+    } else {
+        throw new Error(`The protocol used in '${url}' is unknown. This program only understands 'https' and 'file'`);
+    }
+}
+
 function getArtistSources(authOptions, url) {
-    return getJsonFromUrl(url, authOptions);
+    return getJson(url, authOptions);
 }
 
 /**
@@ -204,7 +219,7 @@ function getArtistSources(authOptions, url) {
  */
 async function getArtistDetails(artistId, authOptions, url) {
     url = url.replace('${artistId}', artistId);
-    const artistDetails = await getJsonFromUrl(url, authOptions);
+    const artistDetails = await getJson(url, authOptions);
     artistDetails.coverCenterX = artistDetails.coverCenterX ? artistDetails.coverCenterX : 50;
     artistDetails.coverCenterY = artistDetails.coverCenterY ? artistDetails.coverCenterY : 50;
     artistDetails.altCoverCenterX = artistDetails.altCoverCenterX ? 'Just ' + artistDetails.altCoverCenterX : 'Nothing';
@@ -232,7 +247,7 @@ async function getArtistDetails(artistId, authOptions, url) {
  */
 function getAlbumsForArtist(artistId, authOptions, url) {
     url = url.replace('${artistId}', artistId);
-    return getJsonFromUrl(url, authOptions);
+    return getJson(url, authOptions);
 }
 
 function renderArtistAlbumStorageTemplate(artistDetails, albums, moduleName) {
@@ -312,7 +327,6 @@ function throwIfThereAreDuplicates(artistShortNames) {
 
 (async () => {
     try {
-        const authOptions = createAuthOptions(getAccessToken());
         const destination = getDestination();
         const configFilename = getConfigFilename();
         let config = null;
@@ -322,6 +336,13 @@ function throwIfThereAreDuplicates(artistShortNames) {
         } else {
             console.log('No config file argument given, trying to create config from environment variables');
             config = getConfigFromEnvironment();
+        }
+        
+        const hasAtLeastOneHttpUrl = [config.sourceUrl, config.albumsUrl, config.artistDetailsUrl].some(x => x.startsWith('http'))
+        const authOptions = createAuthOptions(getAccessToken());
+
+        if(hasAtLeastOneHttpUrl && !authOptions) {
+            console.warn('http sources have been defined but no auth options');
         }
 
         makeSureFolderExists(destination);
