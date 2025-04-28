@@ -32,7 +32,7 @@ albumStorage : Array Album
 albumStorage =
     [ { id = "<%~ it.firstAlbum.id %>" |> AlbumId
       , name = "<%~ it.firstAlbum.name %>"
-      , urlToOpen = "<%~ it.firstAlbum.url_to_open %>"
+      , urlToOpen = "<%~ it.firstAlbum.urlToOpen %>"
       , covers =
             [ { url = "<%~ it.firstAlbum.firstImage.url %>"
               , width = <%~ it.firstAlbum.firstImage.width %> 
@@ -48,7 +48,7 @@ albumStorage =
 <% it.albums.forEach(function(album){ %>
     , { id = "<%~ album.id %>" |> AlbumId
       , name = "<%~ album.name %>"
-      , urlToOpen = "<%~ album.url_to_open %>"
+      , urlToOpen = "<%~ album.urlToOpen %>"
       , covers =
             [ { url = "<%~ album.firstImage.url %>" 
               , width = <%~ album.firstImage.width %> 
