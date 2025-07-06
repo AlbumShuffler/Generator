@@ -1,10 +1,13 @@
-# Spotify Album Shuffler
+# DEPRECATION NOTICE
+**THIS REPOSITORY HAS BEEN DEPRECATED - USE THE [NEW VERSION](https://github.com/AlbumShuffler/DataRetrieverNet) INSTEAD
+
+## Spotify Album Shuffler
 This is part of the album shuffler project. This repository is used to create the required Elm code for the actual [web app](https://github.com/AlbumShuffler/Frontend).
 
-## Configuration
+### Configuration
 The generator requires several input files to generate Elm code.
 
-### Source file
+#### Source file
 First, you need to define the "source". It is a JSON file in the following form:
 ```
 [ { "shortName": "Short 1"
@@ -29,13 +32,13 @@ First, you need to define the "source". It is a JSON file in the following form:
 ```
 It defines the artists that will later show up in the web app. All fields except the `id` and `type` field may be chosen as you see fit. The `type` field needs to either be set to `artist` or `playlist`. The `id` fields needs to contain the `id` of the artist or playlist that is used by Spotify for identification. The easiest way is to use the Spotify web interface and grab the ids from the current url.
 
-### Spotify metadata
+#### Spotify metadata
 Additional data from Spotify is required. There is a set of bash scripts that authenticate with the Spotify web api and download everything. See [this repository](https://github.com/AlbumShuffler/DataRetriever) for details. The scripts use **the same source file** as this generator. Its output will be several folders each with two files in them:
 
 1. `artist` - contains artist/playlist details
 2. `albums` - contains a list of all the albums of the given artist/in The scripts will automatically
 
-## Usage
+### Usage
 Clone the repository and install all dependencies and run the script:
 ```
 git clone https://github.com/AlbumShuffler/Generator.git shuffler-generator
@@ -52,7 +55,7 @@ The location may either be files or https urls. File paths need to be prefixed w
 
 There are two ways to configure the generator: by using a config file or environment variables.
 
-### Configuration by file
+#### Configuration by file
 Create a file like this:
 ```
 {
@@ -63,7 +66,7 @@ Create a file like this:
 ```
 and pass it to the program by using the `--config=/path/to/my/config.json` parameter.
 
-### Configuration by environment variables
+#### Configuration by environment variables
 Set the following environment variables:
 ```
 ALBUM_SHUFFLER_GENERATOR_SOURCE_URL
@@ -71,7 +74,7 @@ ALBUM_SHUFFLER_GENERATOR_ARTIST_DETAILS_URL
 ALBUM_SHUFFLER_GENERATOR_ALBUMS_URL
 ```
 
-### Authorization
+#### Authorization
 This project currently supports access to private GitHub ressources by setting an authentication header.
 You can set its values by using the parameter `--token=abcdefghij` or setting the `SPOTIFY_ALBUM_REPO_ACCESS_TOKEN` environment variable.
 
