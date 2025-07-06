@@ -1,5 +1,5 @@
 # DEPRECATION NOTICE
-**THIS REPOSITORY HAS BEEN DEPRECATED - USE THE [NEW VERSION](https://github.com/AlbumShuffler/DataRetrieverNet) INSTEAD
+**This tool has been superseeded by the [Tools](https://github.com/AlbumShuffler/Tools) repository.**
 
 ## Spotify Album Shuffler
 This is part of the album shuffler project. This repository is used to create the required Elm code for the actual [web app](https://github.com/AlbumShuffler/Frontend).
